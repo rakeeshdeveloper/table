@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced HTML Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .editor-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            height: calc(100vh - 40px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Toolbar Styles */
+        .editor-toolbar {
+            background: #2c3e50;
+            padding: 12px 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            border-bottom: 2px solid #34495e;
+            min-height: 56px;
+        }
+
+        .toolbar-group {
+            display: flex;
+            gap: 2px;
+            padding: 0 10px;
+            border-right: 1px solid #4a5f7a;
+        }
+
+        .toolbar-group:last-child {
+            border-right: none;
+        }
+
+        .toolbar-btn {
+            background: #34495e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s ease;
+            min-width: 36px;
+            justify-content: center;
+        }
+
+        .toolbar-btn:hover {
+            background: #4a6fa3;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+        }
+
+        .toolbar-btn.active {
+            background: #2980b9;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toolbar-select {
+            background: #34495e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 100px;
+        }
+
+        .toolbar-color {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border: 2px solid #4a6fa3;
+            overflow: hidden;
+        }
+
+        .toolbar-color input {
+            width: 150%;
+            height: 150%;
+            cursor: pointer;
+            border: none;
+            transform: translate(-25%, -25%);
+        }
+
+        /* Editor Area */
+        .editor-wrapper {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        #editorArea {
+            flex: 1;
+            padding: 30px;
+            font-size: 16px;
+            line-height: 1.8;
+            overflow-y: auto;
+            background: #f8f9fa;
+            min-height: 500px;
+            outline: none;
+        }
+
+        #editorArea:focus {
+            background: white;
+        }
+
+        /* Source View */
+        .source-container {
+            display: none;
+            flex: 1;
+            padding: 0;
+            position: relative;
+        }
+
+        #sourceEditor {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 30px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            resize: none;
+            tab-size: 4;
+            white-space: pre;
+            overflow: auto;
+        }
+
+        .source-line-numbers {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 50px;
+            height: 100%;
+            background: #252526;
+            color: #858585;
+            padding: 30px 10px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            text-align: right;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* Preview Panel */
+        .preview-panel {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            width: 400px;
+            height: 500px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+        }
+
+        .preview-header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .preview-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .close-preview {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background: #2c3e50;
+            color: #95a5a6;
+            padding: 8px 15px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #34495e;
+        }
+
+        .word-count {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            min-width: 400px;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            color: #2c3e50;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #34495e;
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: #2980b9;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #3498db;
+        }
+
+        .btn-secondary {
+            background: #7f8c8d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #95a5a6;
+        }
+
+        /* Custom Styles for Editor Content */
+        #editorArea h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin: 30px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #2980b9;
+        }
+
+        #editorArea h2 {
+            color: #34495e;
+            font-size: 28px;
+            margin: 25px 0 15px;
+        }
+
+        #editorArea h3 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin: 20px 0 12px;
+        }
+
+        #editorArea h4 {
+            color: #34495e;
+            font-size: 20px;
+            margin: 18px 0 10px;
+        }
+
+        #editorArea p {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        #editorArea ul, #editorArea ol {
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }
+
+        #editorArea li {
+            margin-bottom: 5px;
+        }
+
+        #editorArea table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #editorArea th {
+            background: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        #editorArea td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        #editorArea tr:hover {
+            background: #f5f7fa;
+        }
+
+        #editorArea blockquote {
+            border-left: 4px solid #2980b9;
+            padding-left: 20px;
+            margin: 20px 0;
+            color: #555;
+            font-style: italic;
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        #editorArea img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 6px;
+            margin: 15px 0;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        #editorArea a {
+            color: #2980b9;
+            text-decoration: none;
+            border-bottom: 1px dotted #2980b9;
+        }
+
+        #editorArea a:hover {
+            color: #3498db;
+            border-bottom: 1px solid #3498db;
+        }
+
+        #editorArea code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Consolas', monospace;
+            font-size: 14px;
+            color: #e74c3c;
+        }
+
+        #editorArea pre {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .editor-container {
+                height: auto;
+                min-height: calc(100vh - 40px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .editor-toolbar {
+                overflow-x: auto;
+                padding: 8px;
+            }
+            
+            .toolbar-group {
+                flex-wrap: wrap;
+            }
+            
+            .preview-panel {
+                width: 95%;
+                height: 60vh;
+                right: 2.5%;
+                bottom: 2.5%;
+            }
+            
+            .modal-content {
+                min-width: 90%;
+                margin: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <!-- Toolbar -->
+        <div class="editor-toolbar">
+            <!-- Format Group -->
+            <div class="toolbar-group">
+                <select class="toolbar-select" id="formatSelect">
+                    <option value="p">Paragraph</option>
+                    <option value="h1">Heading 1</option>
+                    <option value="h2">Heading 2</option>
+                    <option value="h3">Heading 3</option>
+                    <option value="h4">Heading 4</option>
+                    <option value="h5">Heading 5</option>
+                    <option value="h6">Heading 6</option>
+                    <option value="pre">Code Block</option>
+                    <option value="blockquote">Quote</option>
+                </select>
+            </div>
+
+            <!-- Text Formatting -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" data-command="bold" title="Bold">
+                    <span style="font-weight: bold;">B</span>
+                </button>
+                <button class="toolbar-btn" data-command="italic" title="Italic">
+                    <span style="font-style: italic;">I</span>
+                </button>
+                <button class="toolbar-btn" data-command="underline" title="Underline">
+                    <span style="text-decoration: underline;">U</span>
+                </button>
+                <button class="toolbar-btn" data-command="strikeThrough" title="Strikethrough">
+                    <span style="text-decoration: line-through;">S</span>
+                </button>
+            </div>
+
+            <!-- Alignment -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" data-command="justifyLeft" title="Align Left">
+                    ←
+                </button>
+                <button class="toolbar-btn" data-command="justifyCenter" title="Align Center">
+                    ↔
+                </button>
+                <button class="toolbar-btn" data-command="justifyRight" title="Align Right">
+                    →
+                </button>
+                <button class="toolbar-btn" data-command="justifyFull" title="Justify">
+                    ⇔
+                </button>
+            </div>
+
+            <!-- Lists -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+                    ••
+                </button>
+                <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+                    1.
+                </button>
+                <button class="toolbar-btn" id="indentBtn" title="Indent">
+                    →
+                </button>
+                <button class="toolbar-btn" id="outdentBtn" title="Outdent">
+                    ←
+                </button>
+            </div>
+
+            <!-- Insert -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="insertLink" title="Insert Link">
+                    🔗
+                </button>
+                <button class="toolbar-btn" id="insertImage" title="Insert Image">
+                    🖼️
+                </button>
+                <button class="toolbar-btn" id="insertTable" title="Insert Table">
+                    📊
+                </button>
+                <button class="toolbar-btn" id="insertHorizontal" title="Horizontal Line">
+                    —
+                </button>
+            </div>
+
+            <!-- Color -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn toolbar-color" id="textColorBtn" title="Text Color">
+                    <input type="color" id="textColor" value="#000000">
+                </button>
+                <button class="toolbar-btn toolbar-color" id="bgColorBtn" title="Background Color">
+                    <input type="color" id="bgColor" value="#ffffff">
+                </button>
+            </div>
+
+            <!-- Source/Preview -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="toggleSource" title="Source Code">
+                    &lt;/&gt;
+                </button>
+                <button class="toolbar-btn" id="togglePreview" title="Preview">
+                    👁️
+                </button>
+            </div>
+
+            <!-- Actions -->
+            <div class="toolbar-group">
+                <button class="toolbar-btn" id="clearBtn" title="Clear">
+                    🗑️
+                </button>
+                <button class="toolbar-btn" id="saveBtn" title="Save">
+                    💾
+                </button>
+                <button class="toolbar-btn" id="printBtn" title="Print">
+                    🖨️
+                </button>
+            </div>
+        </div>
+
+        <!-- Editor Area -->
+        <div class="editor-wrapper">
+            <div id="editorArea" contenteditable="true">
+                <h1>Welcome to Advanced HTML Editor</h1>
+                <p>This is a fully-featured HTML editor with all the tools you need. Start typing or use the toolbar above to format your content.</p>
+                
+                <h2>Try These Features:</h2>
+                <ul>
+                    <li>Format text with headings, bold, italic, etc.</li>
+                    <li>Insert images, links, and tables</li>
+                    <li>Create lists and adjust alignment</li>
+                    <li>Change text and background colors</li>
+                    <li>Switch to source code view</li>
+                    <li>Preview your content</li>
+                </ul>
+                
+                <h3>Sample Table:</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Feature</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Text Formatting</td>
+                            <td>Bold, italic, underline, strikethrough</td>
+                            <td>✅ Available</td>
+                        </tr>
+                        <tr>
+                            <td>Lists</td>
+                            <td>Ordered and unordered lists</td>
+                            <td>✅ Available</td>
+                        </tr>
+                        <tr>
+                            <td>Tables</td>
+                            <td>Create and customize tables</td>
+                            <td>✅ Available</td>
+                        </tr>
+                        <tr>
+                            <td>Images & Links</td>
+                            <td>Insert and manage media</td>
+                            <td>✅ Available</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <blockquote>
+                    "This editor provides all the essential tools for creating professional HTML content."
+                </blockquote>
+            </div>
+
+            <div class="source-container" id="sourceContainer">
+                <div class="source-line-numbers" id="lineNumbers">1</div>
+                <textarea id="sourceEditor"></textarea>
+            </div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div>HTML Editor v1.0</div>
+            <div class="word-count">
+                <span>Words: <span id="wordCount">0</span></span>
+                <span>Chars: <span id="charCount">0</span></span>
+            </div>
+            <div id="editorMode">Visual Mode</div>
+        </div>
+    </div>
+
+    <!-- Preview Panel -->
+    <div class="preview-panel" id="previewPanel">
+        <div class="preview-header">
+            <span>Preview</span>
+            <button class="close-preview" id="closePreview">&times;</button>
+        </div>
+        <div class="preview-content" id="previewContent"></div>
+    </div>
+
+    <!-- Link Modal -->
+    <div class="modal" id="linkModal">
+        <div class="modal-content">
+            <div class="modal-header">Insert Link</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="linkUrl">URL:</label>
+                    <input type="url" id="linkUrl" class="form-control" placeholder="https://example.com">
+                </div>
+                <div class="form-group">
+                    <label for="linkText">Text (optional):</label>
+                    <input type="text" id="linkText" class="form-control" placeholder="Link text">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="newTab"> Open in new tab
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelLink">Cancel</button>
+                <button class="btn btn-primary" id="insertLinkBtn">Insert Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div class="modal" id="imageModal">
+        <div class="modal-content">
+            <div class="modal-header">Insert Image</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="imageUrl">Image URL:</label>
+                    <input type="url" id="imageUrl" class="form-control" placeholder="https://example.com/image.jpg">
+                </div>
+                <div class="form-group">
+                    <label for="imageAlt">Alt Text:</label>
+                    <input type="text" id="imageAlt" class="form-control" placeholder="Description of image">
+                </div>
+                <div class="form-group">
+                    <label for="imageWidth">Width (px):</label>
+                    <input type="number" id="imageWidth" class="form-control" placeholder="Auto">
+                </div>
+                <div class="form-group">
+                    <label for="imageHeight">Height (px):</label>
+                    <input type="number" id="imageHeight" class="form-control" placeholder="Auto">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelImage">Cancel</button>
+                <button class="btn btn-primary" id="insertImageBtn">Insert Image</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Modal -->
+    <div class="modal" id="tableModal">
+        <div class="modal-content">
+            <div class="modal-header">Insert Table</div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="tableRows">Rows:</label>
+                    <input type="number" id="tableRows" class="form-control" value="3" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label for="tableCols">Columns:</label>
+                    <input type="number" id="tableCols" class="form-control" value="3" min="1" max="10">
+                </div>
+                <div class="form-group">
+                    <label for="tableWidth">Width (%):</label>
+                    <input type="number" id="tableWidth" class="form-control" value="100" min="10" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="tableBorder">Border:</label>
+                    <input type="number" id="tableBorder" class="form-control" value="1" min="0" max="10">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelTable">Cancel</button>
+                <button class="btn btn-primary" id="insertTableBtn">Insert Table</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const editor = document.getElementById('editorArea');
+            const sourceEditor = document.getElementById('sourceEditor');
+            const sourceContainer = document.getElementById('sourceContainer');
+            const lineNumbers = document.getElementById('lineNumbers');
+            const previewPanel = document.getElementById('previewPanel');
+            const previewContent = document.getElementById('previewContent');
+            const wordCount = document.getElementById('wordCount');
+            const charCount = document.getElementById('charCount');
+            const editorMode = document.getElementById('editorMode');
+            
+            let isSourceMode = false;
+            let isPreviewOpen = false;
+
+            // Initialize
+            updateWordCount();
+            updateLineNumbers();
+
+            // Toolbar button handlers
+            document.querySelectorAll('[data-command]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (isSourceMode) return;
+                    const command = this.dataset.command;
+                    document.execCommand(command, false, null);
+                    editor.focus();
+                });
+            });
+
+            // Format select
+            document.getElementById('formatSelect').addEventListener('change', function() {
+                if (isSourceMode) return;
+                document.execCommand('formatBlock', false, this.value);
+                editor.focus();
+            });
+
+            // Color pickers
+            document.getElementById('textColor').addEventListener('input', function() {
+                if (isSourceMode) return;
+                document.execCommand('foreColor', false, this.value);
+                editor.focus();
+            });
+
+            document.getElementById('bgColor').addEventListener('input', function() {
+                if (isSourceMode) return;
+                document.execCommand('backColor', false, this.value);
+                editor.focus();
+            });
+
+            // Indent/Outdent
+            document.getElementById('indentBtn').addEventListener('click', function() {
+                if (isSourceMode) return;
+                document.execCommand('indent', false, null);
+                editor.focus();
+            });
+
+            document.getElementById('outdentBtn').addEventListener('click', function() {
+                if (isSourceMode) return;
+                document.execCommand('outdent', false, null);
+                editor.focus();
+            });
+
+            // Toggle source view
+            document.getElementById('toggleSource').addEventListener('click', function() {
+                toggleSourceView();
+            });
+
+            // Toggle preview
+            document.getElementById('togglePreview').addEventListener('click', function() {
+                togglePreview();
+            });
+
+            // Clear editor
+            document.getElementById('clearBtn').addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear the editor?')) {
+                    if (isSourceMode) {
+                        sourceEditor.value = '';
+                        updateLineNumbers();
+                    } else {
+                        editor.innerHTML = '<p><br></p>';
+                    }
+                    updateWordCount();
+                }
+            });
+
+            // Save content
+            document.getElementById('saveBtn').addEventListener('click', function() {
+                const content = isSourceMode ? sourceEditor.value : editor.innerHTML;
+                const blob = new Blob([content], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'editor-content.html';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+
+            // Print content
+            document.getElementById('printBtn').addEventListener('click', function() {
+                const content = isSourceMode ? sourceEditor.value : editor.innerHTML;
+                const printWindow = window.open('', '_blank');
+                printWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>Print</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+                            img { max-width: 100%; }
+                            table { border-collapse: collapse; width: 100%; }
+                            th, td { border: 1px solid #ddd; padding: 8px; }
+                        </style>
+                    </head>
+                    <body>${content}</body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+            });
+
+            // Link modal
+            document.getElementById('insertLink').addEventListener('click', function() {
+                if (isSourceMode) return;
+                document.getElementById('linkModal').style.display = 'flex';
+            });
+
+            document.getElementById('cancelLink').addEventListener('click', function() {
+                document.getElementById('linkModal').style.display = 'none';
+            });
+
+            document.getElementById('insertLinkBtn').addEventListener('click', function() {
+                const url = document.getElementById('linkUrl').value;
+                const text = document.getElementById('linkText').value;
+                const newTab = document.getElementById('newTab').checked;
+                
+                if (url) {
+                    if (text) {
+                        document.execCommand('insertHTML', false, 
+                            `<a href="${url}" ${newTab ? 'target="_blank"' : ''}>${text}</a>`);
+                    } else {
+                        document.execCommand('createLink', false, url);
+                        if (newTab) {
+                            const links = editor.querySelectorAll('a[href]');
+                            const lastLink = links[links.length - 1];
+                            if (lastLink) lastLink.target = '_blank';
+                        }
+                    }
+                    editor.focus();
+                }
+                document.getElementById('linkModal').style.display = 'none';
+                document.getElementById('linkUrl').value = '';
+                document.getElementById('linkText').value = '';
+            });
+
+            // Image modal
+            document.getElementById('insertImage').addEventListener('click', function() {
+                if (isSourceMode) return;
+                document.getElementById('imageModal').style.display = 'flex';
+            });
+
+            document.getElementById('cancelImage').addEventListener('click', function() {
+                document.getElementById('imageModal').style.display = 'none';
+            });
+
+            document.getElementById('insertImageBtn').addEventListener('click', function() {
+                const url = document.getElementById('imageUrl').value;
+                const alt = document.getElementById('imageAlt').value || 'Image';
+                const width = document.getElementById('imageWidth').value;
+                const height = document.getElementById('imageHeight').value;
+                
+                if (url) {
+                    let imgHtml = `<img src="${url}" alt="${alt}"`;
+                    if (width) imgHtml += ` width="${width}"`;
+                    if (height) imgHtml += ` height="${height}"`;
+                    imgHtml += ' style="max-width:100%; height:auto;">';
+                    
+                    document.execCommand('insertHTML', false, imgHtml);
+                    editor.focus();
+                }
+                document.getElementById('imageModal').style.display = 'none';
+                document.getElementById('imageUrl').value = '';
+                document.getElementById('imageAlt').value = '';
+            });
+
+            // Table modal - FIXED SECTION
+            document.getElementById('insertTable').addEventListener('click', function() {
+                if (isSourceMode) return;
+                document.getElementById('tableModal').style.display = 'flex';
+            });
+
+            document.getElementById('cancelTable').addEventListener('click', function() {
+                document.getElementById('tableModal').style.display = 'none';
+            });
+
+            document.getElementById('insertTableBtn').addEventListener('click', function() {
+                const rows = parseInt(document.getElementById('tableRows').value) || 3;
+                const cols = parseInt(document.getElementById('tableCols').value) || 3;
+                const width = document.getElementById('tableWidth').value || 100;
+                const border = document.getElementById('tableBorder').value || 1;
+                
+                // Create table HTML
+                let tableHTML = `<table style="width:${width}%; border-collapse: collapse; margin: 15px 0;" border="${border}">`;
+                
+                // Create header row
+                tableHTML += '<thead><tr>';
+                for (let c = 0; c < cols; c++) {
+                    tableHTML += `<th style="padding: 8px; border: 1px solid #ddd; background: #f2f2f2;">Header ${c+1}</th>`;
+                }
+                tableHTML += '</tr></thead>';
+                
+                // Create body rows
+                tableHTML += '<tbody>';
+                for (let r = 0; r < rows; r++) {
+                    tableHTML += '<tr>';
+                    for (let c = 0; c < cols; c++) {
+                        tableHTML += `<td style="padding: 8px; border: 1px solid #ddd;">Row ${r+1}, Col ${c+1}</td>`;
+                    }
+                    tableHTML += '</tr>';
+                }
+                tableHTML += '</tbody></table>';
+                
+                // Insert the table HTML
+                document.execCommand('insertHTML', false, tableHTML);
+                editor.focus();
+                document.getElementById('tableModal').style.display = 'none';
+                
+                // Clear the form
+                document.getElementById('tableRows').value = 3;
+                document.getElementById('tableCols').value = 3;
+                document.getElementById('tableWidth').value = 100;
+                document.getElementById('tableBorder').value = 1;
+            });
+
+            // Horizontal line
+            document.getElementById('insertHorizontal').addEventListener('click', function() {
+                if (isSourceMode) return;
+                document.execCommand('insertHTML', false, '<hr style="border:1px solid #ddd; margin:20px 0;">');
+                editor.focus();
+            });
+
+            // Close preview
+            document.getElementById('closePreview').addEventListener('click', function() {
+                previewPanel.style.display = 'none';
+                isPreviewOpen = false;
+            });
+
+            // Update word count
+            editor.addEventListener('input', updateWordCount);
+            sourceEditor.addEventListener('input', function() {
+                updateWordCount();
+                updateLineNumbers();
+            });
+
+            // Update line numbers for source editor
+            sourceEditor.addEventListener('scroll', function() {
+                lineNumbers.scrollTop = sourceEditor.scrollTop;
+            });
+
+            // Functions
+            function toggleSourceView() {
+                if (!isSourceMode) {
+                    // Switch to source view
+                    editor.style.display = 'none';
+                    sourceContainer.style.display = 'block';
+                    sourceEditor.value = editor.innerHTML;
+                    isSourceMode = true;
+                    editorMode.textContent = 'Source Mode';
+                    document.getElementById('toggleSource').classList.add('active');
+                    updateLineNumbers();
+                    sourceEditor.focus();
+                } else {
+                    // Switch back to visual editor
+                    editor.style.display = 'block';
+                    sourceContainer.style.display = 'none';
+                    editor.innerHTML = sourceEditor.value;
+                    isSourceMode = false;
+                    editorMode.textContent = 'Visual Mode';
+                    document.getElementById('toggleSource').classList.remove('active');
+                    editor.focus();
+                }
+            }
+
+            function togglePreview() {
+                if (!isPreviewOpen) {
+                    const content = isSourceMode ? sourceEditor.value : editor.innerHTML;
+                    previewContent.innerHTML = content;
+                    previewPanel.style.display = 'flex';
+                    isPreviewOpen = true;
+                    document.getElementById('togglePreview').classList.add('active');
+                } else {
+                    previewPanel.style.display = 'none';
+                    isPreviewOpen = false;
+                    document.getElementById('togglePreview').classList.remove('active');
+                }
+            }
+
+            function updateWordCount() {
+                let text;
+                if (isSourceMode) {
+                    text = sourceEditor.value.replace(/<[^>]*>/g, ' ').trim();
+                } else {
+                    text = editor.innerText || editor.textContent;
+                }
+                
+                const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+                const chars = text.length;
+                
+                wordCount.textContent = words;
+                charCount.textContent = chars;
+            }
+
+            function updateLineNumbers() {
+                const lines = sourceEditor.value.split('\n').length;
+                let numbers = '';
+                for (let i = 1; i <= lines; i++) {
+                    numbers += i + '\n';
+                }
+                lineNumbers.innerHTML = numbers;
+            }
+
+            // Close modals on escape
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    document.querySelectorAll('.modal').forEach(modal => {
+                        modal.style.display = 'none';
+                    });
+                    if (isPreviewOpen) {
+                        previewPanel.style.display = 'none';
+                        isPreviewOpen = false;
+                        document.getElementById('togglePreview').classList.remove('active');
+                    }
+                }
+            });
+
+            // Add sample content button (hidden in UI but accessible via console)
+            window.insertSampleContent = function() {
+                const sample = `
+                    <h1>Advanced HTML Editor</h1>
+                    <p>This editor provides comprehensive HTML editing capabilities with a clean, modern interface.</p>
+                    
+                    <h2>Features Include:</h2>
+                    <ul>
+                        <li><strong>Rich Text Formatting:</strong> Bold, italic, underline, strikethrough</li>
+                        <li><strong>Headings:</strong> H1 through H6 with proper styling</li>
+                        <li><strong>Lists:</strong> Ordered and unordered lists with indentation</li>
+                        <li><strong>Tables:</strong> Create and customize data tables</li>
+                        <li><strong>Media:</strong> Insert images and links</li>
+                        <li><strong>Colors:</strong> Text and background color pickers</li>
+                        <li><strong>Alignment:</strong> Left, center, right, and justify</li>
+                        <li><strong>Source View:</strong> Edit raw HTML code</li>
+                        <li><strong>Preview:</strong> Live preview of your content</li>
+                    </ul>
+                    
+                    <h2>Example Table</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Function</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Editor Core</td>
+                                <td>Rich text editing</td>
+                                <td>✅ Operational</td>
+                            </tr>
+                            <tr>
+                                <td>Toolbar</td>
+                                <td>Formatting controls</td>
+                                <td>✅ Complete</td>
+                            </tr>
+                            <tr>
+                                <td>Modals</td>
+                                <td>Insert dialogs</td>
+                                <td>✅ Implemented</td>
+                            </tr>
+                            <tr>
+                                <td>Preview</td>
+                                <td>Content preview</td>
+                                <td>✅ Available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <blockquote>
+                        "A powerful editor for creating professional HTML content with ease and precision."
+                    </blockquote>
+                    
+                    <h3>Code Example</h3>
+                    <pre><code>&lt;div class="example"&gt;
+    &lt;p&gt;This is a code block example&lt;/p&gt;
+    &lt;button onclick="alert('Hello')"&gt;Click me&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+                    
+                    <p style="text-align: center;">
+                        <em>Try all the features and create amazing content!</em>
+                    </p>
+                `;
+                
+                if (isSourceMode) {
+                    sourceEditor.value = sample;
+                    updateLineNumbers();
+                } else {
+                    editor.innerHTML = sample;
+                }
+                updateWordCount();
+            };
+
+            // Auto-save to localStorage
+            setInterval(() => {
+                const content = isSourceMode ? sourceEditor.value : editor.innerHTML;
+                localStorage.setItem('editorContent', content);
+                localStorage.setItem('editorMode', isSourceMode ? 'source' : 'visual');
+            }, 30000);
+
+            // Load saved content
+            const savedContent = localStorage.getItem('editorContent');
+            const savedMode = localStorage.getItem('editorMode');
+            
+            if (savedContent) {
+                if (savedMode === 'source') {
+                    toggleSourceView();
+                    sourceEditor.value = savedContent;
+                } else {
+                    editor.innerHTML = savedContent;
+                }
+                updateWordCount();
+                updateLineNumbers();
+            }
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', function(e) {
+                // Ctrl/Cmd + S to save
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    document.getElementById('saveBtn').click();
+                }
+                
+                // Ctrl/Cmd + P to print
+                if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                    e.preventDefault();
+                    document.getElementById('printBtn').click();
+                }
+                
+                // Ctrl/Cmd + Z/Y for undo/redo
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                    if (!isSourceMode) {
+                        e.preventDefault();
+                        document.execCommand('undo', false, null);
+                    }
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+                    if (!isSourceMode) {
+                        e.preventDefault();
+                        document.execCommand('redo', false, null);
+                    }
+                }
+                
+                // Ctrl/Cmd + B for bold
+                if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                    if (!isSourceMode) {
+                        e.preventDefault();
+                        document.execCommand('bold', false, null);
+                    }
+                }
+                
+                // Ctrl/Cmd + I for italic
+                if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+                    if (!isSourceMode) {
+                        e.preventDefault();
+                        document.execCommand('italic', false, null);
+                    }
+                }
+            });
+
+            // Make editor the main focus
+            editor.focus();
+        });
+    </script>
+</body>
+</html>
